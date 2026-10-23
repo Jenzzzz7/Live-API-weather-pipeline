@@ -1,0 +1,33 @@
+name: Weather pipeline
+
+on:
+  schedule:
+    - cron: '7 * * * *'   # every hour at :07 (UTC)
+  workflow_dispatch:       # adds a "Run workflow" button for manual runs
+
+jobs:
+  extract-and-load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Create table if missing
+        run: python setup_db.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Fetch weather and load into Postgres
+        run: python load.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
